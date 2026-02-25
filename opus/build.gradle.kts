@@ -9,11 +9,11 @@ plugins {
 android {
     namespace = "com.chennevwin.opus"
     compileSdk {
-        version = release(36)
+        version = release(32)
     }
 
     defaultConfig {
-        minSdk = 24
+        minSdk = 21
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         consumerProguardFiles("consumer-rules.pro")
@@ -59,7 +59,6 @@ android {
 }
 
 dependencies {
-    implementation(libs.androidx.core.ktx)
     testImplementation(libs.junit)
 }
 
