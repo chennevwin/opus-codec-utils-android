@@ -19,7 +19,8 @@ android {
         consumerProguardFiles("consumer-rules.pro")
         externalNativeBuild {
             cmake {
-                cppFlags("-std=c++17")
+                cppFlags("-std=c++17 -O3")
+                arguments("-DCMAKE_BUILD_TYPE=Release")
             }
         }
     }
@@ -52,6 +53,7 @@ android {
     publishing {
         singleVariant("release") {
             withSourcesJar()
+            withJavadocJar()
         }
     }
 }
@@ -65,8 +67,8 @@ publishing {
     publications {
         create<MavenPublication>("release") {
             groupId = "com.github.chennevwin"
-            artifactId = "opus-android-utils"
-            version = "1.0.0"
+            artifactId = "opus-codec-utils-android"
+            version = "1.0.1-alpha"
 
             afterEvaluate {
                 from(components["release"])
