@@ -29,7 +29,7 @@ namespace opus_native {
         int decode(const uint8_t *opus, int len, std::vector<int16_t> &output, int frame_size, int fec) {
             auto *buffer = (opus_int16 *) malloc(channels_ * frame_size * sizeof(opus_int16));
             int samples = opus_decode(decoder_, opus, len, buffer, frame_size, fec);
-            if (ret > 0) {
+            if (samples > 0) {
                 std::copy(&buffer[0], &buffer[samples * channels_], std::back_inserter(output));
             }
             free(buffer);
