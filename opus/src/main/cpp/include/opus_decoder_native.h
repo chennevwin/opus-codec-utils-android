@@ -30,6 +30,9 @@ namespace opus_native {
         void release();
 
         int decode(const uint8_t *opus, int len, std::vector<int16_t> &output, int frame_size, int fec = 0);
+
+        int getChannels();
+
     private:
         class Impl;
         std::unique_ptr<Impl> impl_;

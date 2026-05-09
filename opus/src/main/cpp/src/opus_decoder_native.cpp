@@ -12,9 +12,9 @@ namespace opus_native {
         }
 
         void release() {
-            if (encoder_) {
-                opus_decoder_destroy(encoder_);
-                encoder_ = nullptr;
+            if (decoder_) {
+                opus_decoder_destroy(decoder_);
+                decoder_ = nullptr;
             }
         }
 
@@ -22,22 +22,26 @@ namespace opus_native {
             release();
             int ret;
             channels_ = channels;
-            encoder_ = opus_decoder_create(rate, channels, &ret);
+            decoder_ = opus_decoder_create(rate, channels, &ret);
             return ret;
         }
 
         int decode(const uint8_t *opus, int len, std::vector<int16_t> &output, int frame_size, int fec) {
             auto *buffer = (opus_int16 *) malloc(channels_ * frame_size * sizeof(opus_int16));
-            int ret = opus_decode(encoder_, opus, len, buffer, frame_size, fec);
+            int samples = opus_decode(decoder_, opus, len, buffer, frame_size, fec);
             if (ret > 0) {
-                std::copy(&buffer[0], &buffer[ret], std::back_inserter(output));
+                std::copy(&buffer[0], &buffer[samples * channels_], std::back_inserter(output));
             }
             free(buffer);
-            return ret;
+            return samples;
+        }
+
+        int getChannels() const {
+            return channels_;
         }
 
     private:
-        OpusDecoder *encoder_{nullptr};
+        OpusDecoder *decoder_{nullptr};
         int channels_ = 1;
     };
 
@@ -45,6 +49,7 @@ namespace opus_native {
     }
 
     int OpusDecoderNative::init(int rate, int channels) {
+        channels = channels;
         return impl_->init(rate, channels);
     }
 
@@ -54,6 +59,10 @@ namespace opus_native {
 
     int OpusDecoderNative::decode(const uint8_t *opus, int len, std::vector<int16_t> &output, int frame_size, int fec) {
         return impl_->decode(opus, len, output, frame_size, fec);
+    }
+
+    int OpusDecoderNative::getChannels() {
+        return impl_->getChannels();
     }
 
 
@@ -77,18 +86,20 @@ namespace opus_native {
         if (handle == 0) return nullptr;
         std::vector<int16_t> output;
         jbyte *nativeBytes = env->GetByteArrayElements(bytes, JNI_FALSE);
+        auto decoder = reinterpret_cast<opus_native::OpusDecoderNative *>(handle);
+        auto samples = decoder->decode(reinterpret_cast<uint8_t *>(nativeBytes), len, output, frame_size, fec);
+        int channels = decoder->getChannels();
 
-        auto ret = reinterpret_cast<opus_native::OpusDecoderNative *>(handle)->decode(
-                reinterpret_cast<uint8_t *>(nativeBytes), len, output, frame_size, fec);
-
-        int byteArraySize = ret * 2;
+        int byteArraySize = samples * 2 * channels;
         jbyteArray array = env->NewByteArray(byteArraySize);
         std::vector<jbyte> byteBuffer(byteArraySize);
-        for (int i = 0; i < ret; i++) {
+
+        for (int i = 0; i < samples * channels; i++) {
             int16_t sample = output[i];
             byteBuffer[i * 2] = static_cast<jbyte>(sample & 0xFF);           // Low byte
             byteBuffer[i * 2 + 1] = static_cast<jbyte>((sample >> 8) & 0xFF); // High byte
         }
+
         env->SetByteArrayRegion(array, 0, byteArraySize, byteBuffer.data());
         env->ReleaseByteArrayElements(bytes, nativeBytes, JNI_ABORT);
         return array;
